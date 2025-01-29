@@ -19,7 +19,7 @@ jobs:
       shell: pwsh
       run: |
         $timestamp = Get-Date -Format "yyyyMMdd_HHmm"
-        echo "IMAGE_NAME=${{ secrets.APPSTREAM_IMAGE_NAME }}-$timestamp" | Out-File -FilePath $env:GITHUB_ENV -Append
+        echo "IMAGE_NAME=$por-base-image-$timestamp" | Out-File -FilePath $env:GITHUB_ENV -Append
 
     # 3️⃣ Setup .NET for Windows Build
     - name: Setup .NET
