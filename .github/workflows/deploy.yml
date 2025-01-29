@@ -30,7 +30,6 @@ jobs:
     # 4️⃣ Build WinForms Application
     - name: Build WinForms App
       run: |
-        cd dummy-windows-application
         dotnet publish -c Release -r win-x64 -o ./publish
 
     # 5️⃣ Configure AWS CLI
