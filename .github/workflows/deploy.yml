@@ -69,7 +69,7 @@ jobs:
       shell: pwsh
       run: |
         aws appstream create-updated-image `
-          --existing-image-name "AppStream-WinServer2022-10-22-2024" `
+          --existing-image-name "AppStream-WinServer2022-06-17-2024" `
           --new-image-name "$env:IMAGE_NAME"
 
     # 9️⃣ Update Fleet to Use New Image
