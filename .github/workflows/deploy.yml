@@ -39,13 +39,13 @@ jobs:
         aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws configure set region ${{ secrets.AWS_REGION }}
 
-    # 6️⃣ Install WinForms App on Existing Image Builder
+   # 6️⃣ Install WinForms App on Image Builder
     - name: Install WinForms App on Image Builder
       shell: pwsh
       run: |
         aws ssm send-command --document-name "AWS-RunPowerShellScript" `
           --targets Key=tag:Name,Values="por_tf_appstream_image_builder" `
-          --parameters commands="New-Item -ItemType Directory -Path 'C:\Apps\POR' -Force; Copy-Item -Path './publish/*' -Destination 'C:\Apps\POR' -Recurse -Force"
+          --parameters '{"commands":["New-Item -ItemType Directory -Path \"C:\\Apps\\POR\" -Force; Copy-Item -Path \"./publish/*\" -Destination \"C:\\Apps\\POR\" -Recurse -Force"]}'
 
     # 7️⃣ Create a New AppStream Image from Image Builder
     - name: Create New AppStream Image
