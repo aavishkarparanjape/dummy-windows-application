@@ -51,8 +51,8 @@ jobs:
     - name: Create New AppStream Image
       shell: pwsh
       run: |
-        aws appstream create-image --name "$env:IMAGE_NAME" `
-          --image-builder-name "por_tf_appstream_image_builder"
+        aws appstream create-updated-image --destination-image-name "$env:IMAGE_NAME" `
+          --source-image-name "por_tf_appstream_image_builder"
 
     # 8️⃣ Wait for Image Creation to Complete
     - name: Wait for Image Creation
