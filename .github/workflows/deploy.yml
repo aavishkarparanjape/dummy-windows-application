@@ -68,9 +68,9 @@ jobs:
     - name: Create New AppStream Image
       shell: pwsh
       run: |
-        aws appstream create-updated-image `
-          --existing-image-name "AppStream-WinServer2022-06-17-2024" `
-          --new-image-name "$env:IMAGE_NAME"
+        aws appstream create-image `
+          --name "$env:IMAGE_NAME" `
+          --image-builder-name "por_tf_appstream_image_builder"
 
     # 9️⃣ Update Fleet to Use New Image
     - name: Update AppStream Fleet with New Image
