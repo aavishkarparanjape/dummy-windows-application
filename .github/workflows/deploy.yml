@@ -39,30 +39,38 @@ jobs:
         aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws configure set region ${{ secrets.AWS_REGION }}
 
-   # 6️⃣ Install WinForms App on Image Builder
-    - name: Install WinForms App on Image Builder
+    # 6️⃣ Install WinForms App on Image Builder
+    - name: Install WinForms App and Required Software on Image Builder
       shell: pwsh
       run: |
         aws ssm send-command --document-name "AWS-RunPowerShellScript" `
           --targets Key=tag:Name,Values="por_tf_appstream_image_builder" `
-          --parameters '{"commands":["New-Item -ItemType Directory -Path \"C:\\Apps\\POR\" -Force; Copy-Item -Path \"./publish/*\" -Destination \"C:\\Apps\\POR\" -Recurse -Force"]}'
+          --parameters '{
+            "commands":[
+              "# Create directories",
+              "New-Item -ItemType Directory -Path \"C:\\Apps\\POR\" -Force",
+              
+              "# Copy published app",
+              "Copy-Item -Path \"./publish/*\" -Destination \"C:\\Apps\\POR\" -Recurse -Force",
+              
+              "# Launch Image Assistant to add application",
+              "& \"C:\\Program Files\\Amazon\\Photon\\image-assistant.exe\" add-application --name \"PORApp\" --absolute-app-path \"C:\\Apps\\POR\\YourApp.exe\" --display-name \"POR Application\" --working-directory \"C:\\Apps\\POR\"",
 
-    # 7️⃣ Create a New AppStream Image from Image Builder
+               "# Optional: Install any other required software (example with Chrome)",
+              "$Path = $env:TEMP; $Installer = \"chrome_installer.exe\"; Invoke-WebRequest \"http://dl.google.com/chrome/install/latest/chrome_installer.exe\" -OutFile $Path\\$Installer; Start-Process -FilePath $Path\\$Installer -Args \"/silent /install\" -Verb RunAs -Wait",
+              
+              "# Wait for installations to complete",
+              "Start-Sleep -Seconds 30"
+            ]
+          }'
+
+      # 7️⃣ Create a New AppStream Image from Image Builder
     - name: Create New AppStream Image
       shell: pwsh
       run: |
-        aws appstream create-image --name "$env:IMAGE_NAME" `
-          --image-builder-name "por_tf_appstream_image_builder"
-
-    # 8️⃣ Wait for Image Creation to Complete
-    - name: Wait for Image Creation
-      shell: pwsh
-      run: |
-        do {
-          Start-Sleep -Seconds 60
-          $STATUS = aws appstream describe-images --name "$env:IMAGE_NAME" --query "Images[0].State" --output text
-          echo "Current Status: $STATUS"
-        } while ($STATUS -ne "AVAILABLE")
+        aws appstream create-updated-image `
+          --existing-image-name "AppStream-WinServer2022-10-22-2024" `
+          --new-image-name "$env:IMAGE_NAME"
 
     # 9️⃣ Update Fleet to Use New Image
     - name: Update AppStream Fleet with New Image
