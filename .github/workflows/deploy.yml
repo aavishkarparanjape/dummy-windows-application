@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
 
     steps:
     # 1️⃣ Checkout the WinForms App Source Code
@@ -23,7 +23,7 @@ jobs:
     # 3️⃣ Build WinForms Application
     - name: Build WinForms App
       run: |
-        dotnet publish -c Release -o ./publish
+        dotnet publish -c Release -r win-x64 -o ./publish
 
     # 4️⃣ Configure AWS CLI
     - name: Configure AWS CLI
