@@ -48,7 +48,7 @@ jobs:
           --name "$env:IMAGE_BUILDER_NAME" `
           --instance-type stream.standard.medium `
           --image-name "AppStream-WinServer2022-10-22-2024" `
-          --enable-default-internet-access
+          --enable-default-internet-access `
           --vpc-config "{\"SubnetIds\":[\"subnet-0758627f32019e939\",\"subnet-016fd27868d016310\""],\"SecurityGroupIds\":[\"sg-0de82aa9ccd4a5dd7\",\"sg-0744b69fd510ddcbd\"]}"
 
          # Wait for Image Builder to be running
