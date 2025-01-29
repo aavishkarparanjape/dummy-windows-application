@@ -1,0 +1,92 @@
+name: Deploy WinForms App to AWS AppStream
+
+on:
+  push:
+    branches:
+      - main  # Change this if needed
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # 1️⃣ Checkout the WinForms App Source Code
+    - name: Checkout Repository
+      uses: actions/checkout@v3
+
+    # 2️⃣ Set up .NET for Building WinForms Application
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '8.0.x'
+
+    # 3️⃣ Build WinForms Application
+    - name: Build WinForms App
+      run: |
+        cd dummy-windows-application  # Change to the actual folder containing your app
+        dotnet publish -c Release -o ./publish
+
+    # 4️⃣ Configure AWS CLI
+    - name: Configure AWS CLI
+      run: |
+        aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws configure set region ${{ secrets.AWS_REGION }}
+
+    # 5️⃣ Check if AppStream Image Exists
+    - name: Check if AppStream Image Exists
+      id: check-image
+      run: |
+        IMAGE_EXISTS=$(aws appstream describe-images --name "${{ secrets.APPSTREAM_IMAGE_NAME }}" --query "Images[0]" --output text 2>/dev/null || echo "None")
+        if [[ "$IMAGE_EXISTS" == "None" ]]; then
+          echo "Image does not exist, creating a new one."
+          echo "create_new_image=true" >> $GITHUB_ENV
+        else
+          echo "Image exists, reusing existing image."
+          echo "create_new_image=false" >> $GITHUB_ENV
+        fi
+
+    # 6️⃣ Check if Image Builder Exists
+    - name: Check if Image Builder Exists
+      id: check-builder
+      run: |
+        BUILDER_EXISTS=$(aws appstream describe-image-builders --name "por_tf_appstream_image_builder" --query "ImageBuilders[0]" --output text 2>/dev/null || echo "None")
+        if [[ "$BUILDER_EXISTS" == "None" ]]; then
+          echo "Image Builder does not exist, creating a new one."
+          echo "create_new_builder=true" >> $GITHUB_ENV
+        else
+          echo "Image Builder exists, reusing existing one."
+          echo "create_new_builder=false" >> $GITHUB_ENV
+        fi
+
+    # 7️⃣ Create Image Builder (If Needed)
+    - name: Create AppStream Image Builder
+      if: env.create_new_builder == 'true'
+      run: |
+        aws appstream create-image-builder --name "por_tf_appstream_image_builder" \
+          --instance-type stream.standard.large --image-name "AppStream-WinServer-2022-Base" \
+          --vpc-config SubnetIds=subnet-12345678,SecurityGroupIds=sg-12345678
+
+    # 8️⃣ Install WinForms App on Image Builder
+    - name: Install WinForms App on Image Builder
+      run: |
+        aws ssm send-command --document-name "AWS-RunPowerShellScript" \
+          --targets Key=tag:Name,Values=por_tf_appstream_image_builder \
+          --parameters commands="New-Item -ItemType Directory -Path 'C:\Apps\por'; Copy-Item -Path './publish/*' -Destination 'C:\Apps\por' -Recurse"
+
+    # 9️⃣ Publish AppStream Image
+    - name: Publish AppStream Image
+      run: |
+        if [[ "$create_new_image" == "true" ]]; then
+          aws appstream create-image --name "${{ secrets.APPSTREAM_IMAGE_NAME }}" \
+            --image-builder-name "por_tf_appstream_image_builder"
+        else
+          aws appstream update-image --name "${{ secrets.APPSTREAM_IMAGE_NAME }}"
+        fi
+
+    # 🔟 Restart Fleet to Use New Image
+    - name: Restart AppStream Fleet with New Image
+      run: |
+        aws appstream update-fleet --name "${{ secrets.APPSTREAM_FLEET_NAME }}" --image-name "${{ secrets.APPSTREAM_IMAGE_NAME }}"
+        aws appstream stop-fleet --name "${{ secrets.APPSTREAM_FLEET_NAME }}"
+        aws appstream start-fleet --name "${{ secrets.APPSTREAM_FLEET_NAME }}"
